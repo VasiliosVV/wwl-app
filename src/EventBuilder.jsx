@@ -11,7 +11,7 @@ const INITIAL_MATCH_STATE = {
   type: 'Normal', 
   isChampionship: false, 
   championship_id: '',
-  teams: [[{ wrestler_id: '' }], [{ wrestler_id: '' }]], // Startujeme vždycky jako 1v1
+  teams: [[{ wrestler_id: '' }], [{ wrestler_id: '' }]],
   special_referee_id: ''
 };
 
@@ -20,7 +20,8 @@ export default function EventBuilder({ date, existingEventId, onClose, onSave })
   const [wrestlers, setWrestlers] = useState([]);
   const [championships, setChampionships] = useState([]);
   const [matches, setMatches] = useState([]);
-  const [newMatch, setNewMatch] = useState(INITIAL_MATCH_STATE);
+  // FIX: Tady děláme deep copy, aby se to neslinkovalo
+  const [newMatch, setNewMatch] = useState(() => JSON.parse(JSON.stringify(INITIAL_MATCH_STATE)));
 
   useEffect(() => {
     fetchData();
@@ -40,7 +41,6 @@ export default function EventBuilder({ date, existingEventId, onClose, onSave })
     }
   };
 
-  // --- LOGIKA PRO DYNAMICKÉ TÝMY ---
   const addTeamToMatch = () => {
     setNewMatch({ ...newMatch, teams: [...newMatch.teams, [{ wrestler_id: '' }]] });
   };
@@ -67,14 +67,17 @@ export default function EventBuilder({ date, existingEventId, onClose, onSave })
     updatedTeams[teamIndex][memberIndex].wrestler_id = wrestlerId;
     setNewMatch({ ...newMatch, teams: updatedTeams });
   };
-  // ---------------------------------
 
   const addMatchToCard = () => {
-    // Validace: aspoň někdo musí bejt vybranej
     if (newMatch.teams[0][0].wrestler_id === '') return;
     
-    setMatches([...matches, { ...newMatch, id: Date.now() }]);
-    setNewMatch(INITIAL_MATCH_STATE);
+    // FIX: Hluboká kopie před uložením, ať se nám do toho nepromítají další matche
+    const matchCopy = JSON.parse(JSON.stringify(newMatch));
+    
+    setMatches([...matches, { ...matchCopy, id: Date.now() }]);
+    
+    // FIX: Novej reset musí být taky hluboká kopie čistýho stavu
+    setNewMatch(JSON.parse(JSON.stringify(INITIAL_MATCH_STATE)));
   };
 
   const removeMatch = (id) => {
@@ -104,7 +107,6 @@ export default function EventBuilder({ date, existingEventId, onClose, onSave })
 
       const matchId = matchData[0].id;
       
-      // Účastníci dynamicky podle týmů
       let teamNumber = 1;
       for (const team of m.teams) {
         for (const member of team) {
@@ -141,11 +143,9 @@ export default function EventBuilder({ date, existingEventId, onClose, onSave })
           className="w-full bg-darker border border-gray-700 rounded-xl p-4 text-2xl font-bold mb-8 text-white focus:border-accent outline-none"
         />
 
-        {/* Builder sekce pro jeden match */}
         <div className="bg-darker p-5 rounded-xl border border-gray-700 mb-8">
           <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Plus className="text-accent"/> Setup Match</h3>
           
-          {/* Dynamický výběr stran a borců */}
           <div className="flex flex-wrap gap-4 mb-6 items-start">
             {newMatch.teams.map((team, teamIndex) => (
               <div key={teamIndex} className="bg-dark p-4 rounded-xl border border-gray-600 flex-1 min-w-[250px]">
@@ -216,7 +216,6 @@ export default function EventBuilder({ date, existingEventId, onClose, onSave })
           </button>
         </div>
 
-        {/* Vypsaný Match Card */}
         <h3 className="text-2xl font-bold mb-4 border-b border-gray-800 pb-2">Confirmed Match Card</h3>
         <div className="space-y-3 mb-8">
           {matches.length === 0 ? <p className="text-gray-500">Zatím jsi nepřidal žádný zápasy, brácho.</p> : matches.map((m, index) => (
@@ -227,7 +226,7 @@ export default function EventBuilder({ date, existingEventId, onClose, onSave })
                 <div className="font-bold text-lg my-1 flex flex-wrap items-center gap-2">
                   {m.teams.map((team, tIndex) => (
                     <span key={tIndex} className="flex items-center gap-2">
-                      {team.map((member, mIndex) => getWrestlerName(member.wrestler_id)).filter(n => n !== 'Unknown').join(' & ')}
+                      {team.map((member) => getWrestlerName(member.wrestler_id)).filter(n => n !== 'Unknown').join(' & ')}
                       {tIndex < m.teams.length - 1 && <span className="text-red-500 mx-1 text-sm">VS</span>}
                     </span>
                   ))}
@@ -243,7 +242,6 @@ export default function EventBuilder({ date, existingEventId, onClose, onSave })
           ))}
         </div>
 
-        {/* Hlavní potvrzovací tlačítko */}
         <button onClick={saveEvent} className="w-full bg-accent hover:bg-blue-600 text-white font-bold py-4 rounded-xl text-xl flex items-center justify-center gap-2 transition-colors">
           <Save size={24} /> Confirm & Save Event
         </button>
