@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Users, ArrowLeft, Trash2, Shield, Edit3, MoveRight } from 'lucide-react';
+import { Plus, Users, ArrowLeft, Trash2, Shield } from 'lucide-react';
 import WrestlerDossier from './WrestlerDossier';
 
 export default function RosterView() {
@@ -108,8 +108,11 @@ export default function RosterView() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {wrestlers.map(w => (
-                <motion.div key={w.id} className="bg-dark p-4 rounded-xl border border-gray-800 flex items-center gap-4 shadow-md">
-                    onClick={() => setEditingWrestlerId(w.id)} cursor-pointer
+                <motion.div 
+                  key={w.id} 
+                  onClick={() => setEditingWrestlerId(w.id)}
+                  className="bg-dark p-4 rounded-xl border border-gray-800 flex items-center gap-4 shadow-md cursor-pointer hover:border-accent transition-colors"
+                >
                   <div className="w-12 h-12 bg-darker rounded-full flex items-center justify-center border border-gray-700">
                     {w.photo_url ? <img src={w.photo_url} className="rounded-full" /> : <Users size={24} className="text-gray-500" />}
                   </div>
@@ -120,7 +123,7 @@ export default function RosterView() {
                     </div>
                     <p className="text-xs text-gray-400">Record: <span className="text-green-400">{w.wins}W</span> - <span className="text-red-400">{w.losses}L</span> | Streak: {w.win_streak}</p>
                   </div>
-                  <button onClick={() => deleteWrestler(w.id)} className="text-gray-600 hover:text-red-500 transition-colors">
+                  <button onClick={(e) => { e.stopPropagation(); deleteWrestler(w.id); }} className="text-gray-600 hover:text-red-500 transition-colors z-10">
                     <Trash2 size={18} />
                   </button>
                 </motion.div>
@@ -170,13 +173,14 @@ export default function RosterView() {
           </div>
         </div>
       )}
+      
       {editingWrestlerId && (
-  <WrestlerDossier 
-    wrestlerId={editingWrestlerId} 
-    onClose={() => setEditingWrestlerId(null)} 
-    onUpdate={() => fetchWrestlers(selectedFed.id)} 
-  />
-)}
+        <WrestlerDossier 
+          wrestlerId={editingWrestlerId} 
+          onClose={() => setEditingWrestlerId(null)} 
+          onUpdate={() => fetchWrestlers(selectedFed.id)} 
+        />
+      )}
     </div>
   );
 }
