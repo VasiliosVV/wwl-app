@@ -9,6 +9,7 @@ export default function RosterView() {
   const [selectedFed, setSelectedFed] = useState(null);
   const [wrestlers, setWrestlers] = useState([]);
   const [isFedModalOpen, setIsFedModalOpen] = useState(false);
+  const [editingFed, setEditingFed] = useState(null); // Novej stav pro editaci fedy
   const [editingWrestlerId, setEditingWrestlerId] = useState(null);
   const [isWrestlerModalOpen, setIsWrestlerModalOpen] = useState(false);
   
@@ -37,6 +38,19 @@ export default function RosterView() {
     if (!newFed.name) return;
     await supabase.from('federations').insert([newFed]);
     setIsFedModalOpen(false);
+    setNewFed({ name: '', logo_url: '' }); // Reset formuláře
+    fetchFeds();
+  };
+
+  // Novej update fedy
+  const updateFed = async () => {
+    if (!editingFed.name) return;
+    await supabase.from('federations').update({ 
+      name: editingFed.name, 
+      logo_url: editingFed.logo_url 
+    }).eq('id', editingFed.id);
+    
+    setEditingFed(null);
     fetchFeds();
   };
 
@@ -51,6 +65,7 @@ export default function RosterView() {
       win_streak: 0
     }]);
     setIsWrestlerModalOpen(false);
+    setNewWrestler({ name: '' }); // Reset formuláře
     fetchWrestlers(selectedFed.id);
   };
 
@@ -85,10 +100,18 @@ export default function RosterView() {
                 <motion.div 
                   key={fed.id} whileHover={{ scale: 1.05 }} 
                   onClick={() => setSelectedFed(fed)}
-                  className="bg-dark p-6 rounded-2xl border border-gray-800 cursor-pointer text-center hover:border-accent"
+                  className="bg-dark p-6 rounded-2xl border border-gray-800 cursor-pointer text-center hover:border-accent relative group"
                 >
+                  {/* Tlačítko na edit fedy */}
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setEditingFed(fed); }}
+                    className="absolute top-2 right-2 p-2 bg-darker rounded-full text-gray-500 hover:text-accent opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  >
+                    <Edit3 size={18} />
+                  </button>
+
                   <div className="w-20 h-20 bg-darker mx-auto mb-4 rounded-full flex items-center justify-center border border-gray-700 overflow-hidden">
-                    {fed.logo_url ? <img src={fed.logo_url} alt="logo" /> : <Shield size={40} className="text-gray-600" />}
+                    {fed.logo_url ? <img src={fed.logo_url} alt="logo" className="w-full h-full object-cover" /> : <Shield size={40} className="text-gray-600" />}
                   </div>
                   <h3 className="text-xl font-bold">{fed.name}</h3>
                 </motion.div>
@@ -113,8 +136,8 @@ export default function RosterView() {
                   onClick={() => setEditingWrestlerId(w.id)}
                   className="bg-dark p-4 rounded-xl border border-gray-800 flex items-center gap-4 shadow-md cursor-pointer hover:border-accent transition-colors"
                 >
-                  <div className="w-12 h-12 bg-darker rounded-full flex items-center justify-center border border-gray-700">
-                    {w.photo_url ? <img src={w.photo_url} className="rounded-full" /> : <Users size={24} className="text-gray-500" />}
+                  <div className="w-12 h-12 bg-darker rounded-full flex items-center justify-center border border-gray-700 overflow-hidden">
+                    {w.photo_url ? <img src={w.photo_url} className="w-full h-full object-cover" /> : <Users size={24} className="text-gray-500" />}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
@@ -133,7 +156,7 @@ export default function RosterView() {
         )}
       </AnimatePresence>
 
-      {/* Modal pro Federaci */}
+      {/* Modal pro Novou Federaci */}
       {isFedModalOpen && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-dark border border-gray-700 p-6 rounded-2xl w-full max-w-md">
@@ -156,14 +179,39 @@ export default function RosterView() {
         </div>
       )}
 
-      {/* Modal pro Wrestlera */}
+      {/* Modal pro Editaci Federace */}
+      {editingFed && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-dark border border-gray-700 p-6 rounded-2xl w-full max-w-md">
+            <h3 className="text-2xl font-bold mb-4">Edit Federation</h3>
+            <input 
+              type="text" placeholder="Federation Name" 
+              value={editingFed.name}
+              className="w-full bg-darker border border-gray-700 rounded-lg p-3 mb-4 outline-none focus:border-accent text-white"
+              onChange={(e) => setEditingFed({...editingFed, name: e.target.value})}
+            />
+            <input 
+              type="text" placeholder="Logo URL (optional)" 
+              value={editingFed.logo_url || ''}
+              className="w-full bg-darker border border-gray-700 rounded-lg p-3 mb-6 outline-none focus:border-accent text-white"
+              onChange={(e) => setEditingFed({...editingFed, logo_url: e.target.value})}
+            />
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setEditingFed(null)} className="text-gray-400 hover:text-white transition-colors">Cancel</button>
+              <button onClick={updateFed} className="bg-accent hover:bg-blue-600 px-4 py-2 rounded-lg font-bold transition-colors">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal pro Nového Wrestlera */}
       {isWrestlerModalOpen && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
           <div className="bg-dark border border-gray-700 p-6 rounded-2xl w-full max-w-md">
             <h3 className="text-2xl font-bold mb-4">New Wrestler</h3>
             <input 
               type="text" placeholder="Wrestler Name" 
-              className="w-full bg-darker border border-gray-700 rounded-lg p-3 mb-6 outline-none focus:border-accent"
+              className="w-full bg-darker border border-gray-700 rounded-lg p-3 mb-6 outline-none focus:border-accent text-white"
               onChange={(e) => setNewWrestler({name: e.target.value})}
             />
             <div className="flex justify-end gap-3">
@@ -174,6 +222,7 @@ export default function RosterView() {
         </div>
       )}
       
+      {/* Dossier Wrestlera */}
       {editingWrestlerId && (
         <WrestlerDossier 
           wrestlerId={editingWrestlerId} 
