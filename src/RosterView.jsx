@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Users, ArrowLeft, Trash2, Shield } from 'lucide-react';
+import { Plus, Users, ArrowLeft, Trash2, Shield, Edit3, MoveRight } from 'lucide-react';
 import WrestlerDossier from './WrestlerDossier';
 
 export default function RosterView() {
