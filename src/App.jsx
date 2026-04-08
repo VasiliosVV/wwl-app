@@ -1,11 +1,12 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Users, UsersRound, Trophy, MonitorPlay, ChevronLeft, TrendingUp } from 'lucide-react';
+import { Calendar, Users, UsersRound, Trophy, MonitorPlay, ChevronLeft, TrendingUp, Flag } from 'lucide-react';
 import CalendarView from './CalendarView';
 import RosterView from './RosterView';
 import TagTeamsView from './TagTeamsView';
 import ChampionshipsView from './ChampionshipsView';
 import RankingsView from './RankingsView';
+import ClubsView from './ClubsView'; // Novej import!
 
 // Navigace se ukáže jen když nejsi na hlavní stránce
 function Navigation() {
@@ -69,11 +70,12 @@ function HomeDashboard() {
         <h2 className="wwe-subtitle text-sm md:text-lg mt-4">GM Universe Management</h2>
       </div>
 
-      {/* Grid s těma obříma kartama - hozený do flexu pro symetrii 5 karet */}
+      {/* Grid s těma obříma kartama */}
       <div className="flex flex-wrap justify-center gap-6 max-w-7xl w-full px-4">
         <MenuCard title="Calendar" path="/calendar" icon={Calendar} glowClass="glow-red" />
         <MenuCard title="Rosters" path="/rosters" icon={Users} glowClass="glow-blue" />
         <MenuCard title="Tag Teams" path="/tag-teams" icon={UsersRound} glowClass="glow-blue" />
+        <MenuCard title="Clubs" path="/clubs" icon={Flag} glowClass="glow-gold" />
         <MenuCard title="Rankings" path="/rankings" icon={TrendingUp} glowClass="glow-red" />
         <MenuCard title="Championships" path="/championships" icon={Trophy} glowClass="glow-gold" />
       </div>
@@ -93,6 +95,7 @@ export default function App() {
             <Route path="/calendar" element={<CalendarView />} />
             <Route path="/rosters" element={<RosterView />} />
             <Route path="/tag-teams" element={<TagTeamsView />} />
+            <Route path="/clubs" element={<ClubsView />} />
             <Route path="/rankings" element={<RankingsView />} />
             <Route path="/championships" element={<ChampionshipsView />} />
           </Routes>
