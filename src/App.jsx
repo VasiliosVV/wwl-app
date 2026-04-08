@@ -1,10 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Users, UsersRound, Trophy, MonitorPlay, ChevronLeft } from 'lucide-react';
+import { Calendar, Users, UsersRound, Trophy, MonitorPlay, ChevronLeft, TrendingUp } from 'lucide-react';
 import CalendarView from './CalendarView';
 import RosterView from './RosterView';
 import TagTeamsView from './TagTeamsView';
 import ChampionshipsView from './ChampionshipsView';
+import RankingsView from './RankingsView';
 
 // Navigace se ukáže jen když nejsi na hlavní stránce
 function Navigation() {
@@ -34,22 +35,22 @@ function Navigation() {
 // Ta masivní karta pro hlavní menu
 const MenuCard = ({ title, path, icon: Icon, glowClass }) => {
   return (
-    <Link to={path} className="block w-full">
+    <Link to={path} className="w-full sm:w-[calc(50%-1.5rem)] lg:w-[calc(33.333%-1.5rem)]">
       <motion.div 
         whileHover={{ scale: 1.03, y: -5 }}
         whileTap={{ scale: 0.98 }}
-        className={`metal-card ${glowClass} p-4 md:p-8 flex flex-col items-center justify-center min-h-[300px] md:min-h-[400px] cursor-pointer transition-all duration-300`}
+        className={`metal-card ${glowClass} p-4 md:p-8 flex flex-col items-center justify-center min-h-[300px] md:min-h-[350px] cursor-pointer transition-all duration-300 w-full`}
       >
         <div className="screw s-tl"></div>
         <div className="screw s-tr"></div>
         <div className="screw s-bl"></div>
         <div className="screw s-br"></div>
         
-        <div className="icon-box w-24 h-24 md:w-32 md:h-32 flex items-center justify-center mb-6">
-          <Icon size={48} className="text-white drop-shadow-lg md:w-16 md:h-16" />
+        <div className="icon-box w-24 h-24 md:w-28 md:h-28 flex items-center justify-center mb-6">
+          <Icon size={44} className="text-white drop-shadow-lg md:w-14 md:h-14" />
         </div>
         
-        <h2 className="text-2xl md:text-4xl font-black text-white tracking-widest uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] z-10 text-center">
+        <h2 className="text-2xl md:text-3xl font-black text-white tracking-widest uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] z-10 text-center">
           {title}
         </h2>
       </motion.div>
@@ -68,11 +69,12 @@ function HomeDashboard() {
         <h2 className="wwe-subtitle text-sm md:text-lg mt-4">GM Universe Management</h2>
       </div>
 
-      {/* Grid s těma obříma kartama */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10 max-w-7xl w-full px-4">
+      {/* Grid s těma obříma kartama - hozený do flexu pro symetrii 5 karet */}
+      <div className="flex flex-wrap justify-center gap-6 max-w-7xl w-full px-4">
         <MenuCard title="Calendar" path="/calendar" icon={Calendar} glowClass="glow-red" />
         <MenuCard title="Rosters" path="/rosters" icon={Users} glowClass="glow-blue" />
         <MenuCard title="Tag Teams" path="/tag-teams" icon={UsersRound} glowClass="glow-blue" />
+        <MenuCard title="Rankings" path="/rankings" icon={TrendingUp} glowClass="glow-red" />
         <MenuCard title="Championships" path="/championships" icon={Trophy} glowClass="glow-gold" />
       </div>
       
@@ -91,6 +93,7 @@ export default function App() {
             <Route path="/calendar" element={<CalendarView />} />
             <Route path="/rosters" element={<RosterView />} />
             <Route path="/tag-teams" element={<TagTeamsView />} />
+            <Route path="/rankings" element={<RankingsView />} />
             <Route path="/championships" element={<ChampionshipsView />} />
           </Routes>
         </main>
