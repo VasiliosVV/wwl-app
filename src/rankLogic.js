@@ -1,3 +1,5 @@
+import { supabase } from './supabase';
+
 // rankLogic.js
 const RANKS = [
   'Grade I', 'Grade II', 'Grade III', 'Professional', 
