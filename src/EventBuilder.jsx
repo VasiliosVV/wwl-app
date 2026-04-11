@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { motion } from 'framer-motion';
-import { X, Plus, Save, Trash2, Check, Shield } from 'lucide-react';
+import { X, Plus, Save, Trash2, Check, Shield, SaveAll } from 'lucide-react';
 
 const MATCH_TYPES = [
   "Normal", "Tag Team", "Extreme Rules", "Falls Count Anywhere", "Hell In A Cell", "Steel Cage", "Table Match", "Ladder Match", "Tables, Ladders, and Chairs", "Submission Match", "Last Man Standing", "No Holds Barred", "Iron Man Match", "Casket Match", "Ambulance Match", "I Quit Match", "Inferno Match", "Dumpster Match", "3 Stages of Hell Match", "Elimination Chamber", "WarGames Match", "Battle Royal (Over The Top Rope)", "Royal Rumble", "Underground Match", "Bloodline Rules", "Brawl (Backstage)", "Gauntlet Match", "Gauntlet Turmoil", "Gauntlet Eliminator", "Special Guest Referee", "Tournaments"
@@ -16,11 +16,11 @@ const INITIAL_MATCH_STATE = {
 };
 
 export default function EventBuilder({ date, existingEventId, onClose, onSave }) {
+  const [localEventId, setLocalEventId] = useState(existingEventId);
   const [eventName, setEventName] = useState('');
   const [wrestlers, setWrestlers] = useState([]);
   const [championships, setChampionships] = useState([]);
   const [matches, setMatches] = useState([]);
-  // FIX: Tady děláme deep copy, aby se to neslinkovalo
   const [newMatch, setNewMatch] = useState(() => JSON.parse(JSON.stringify(INITIAL_MATCH_STATE)));
 
   useEffect(() => {
@@ -35,9 +35,35 @@ export default function EventBuilder({ date, existingEventId, onClose, onSave })
     setWrestlers(wRes.data || []);
     setChampionships(cRes.data || []);
 
-    if (existingEventId) {
-      const { data: ev } = await supabase.from('events').select('*').eq('id', existingEventId).single();
+    if (localEventId) {
+      const { data: ev } = await supabase.from('events').select('*').eq('id', localEventId).single();
       if (ev) setEventName(ev.name);
+
+      // Načtení už dříve zabetonovaných zápasů, ať v tom můžeš pokračovat
+      const { data: existingMatches } = await supabase.from('matches')
+        .select(`*, match_participants(wrestler_id, team_number)`)
+        .eq('event_id', localEventId);
+
+      if (existingMatches && existingMatches.length > 0) {
+        const formattedMatches = existingMatches.map(m => {
+          const teamsObj = {};
+          m.match_participants.forEach(p => {
+            if (!teamsObj[p.team_number]) teamsObj[p.team_number] = [];
+            teamsObj[p.team_number].push({ wrestler_id: p.wrestler_id });
+          });
+          const teams = Object.keys(teamsObj).sort().map(k => teamsObj[k]);
+
+          return {
+            id: m.id,
+            type: m.match_type,
+            isChampionship: !!m.championship_id,
+            championship_id: m.championship_id || '',
+            special_referee_id: m.special_referee_id || '',
+            teams: teams
+          };
+        });
+        setMatches(formattedMatches);
+      }
     }
   };
 
@@ -70,13 +96,8 @@ export default function EventBuilder({ date, existingEventId, onClose, onSave })
 
   const addMatchToCard = () => {
     if (newMatch.teams[0][0].wrestler_id === '') return;
-    
-    // FIX: Hluboká kopie před uložením, ať se nám do toho nepromítají další matche
     const matchCopy = JSON.parse(JSON.stringify(newMatch));
-    
     setMatches([...matches, { ...matchCopy, id: Date.now() }]);
-    
-    // FIX: Novej reset musí být taky hluboká kopie čistýho stavu
     setNewMatch(JSON.parse(JSON.stringify(INITIAL_MATCH_STATE)));
   };
 
@@ -84,19 +105,33 @@ export default function EventBuilder({ date, existingEventId, onClose, onSave })
     setMatches(matches.filter(m => m.id !== id));
   };
 
-  const saveEvent = async () => {
-    if (!eventName) return;
+  // Univerzální ukládací funkce (řeší duplikáty)
+  const saveEventData = async () => {
+    if (!eventName) {
+      alert("Kámo, dej tomu eventu nějaký jméno!");
+      return null;
+    }
     
-    let currentEventId = existingEventId;
+    let currentEventId = localEventId;
 
     if (!currentEventId) {
       const { data, error } = await supabase.from('events').insert([{ name: eventName, event_date: date }]).select();
-      if (error) { console.error("Event error:", error); return; }
+      if (error) { console.error("Event error:", error); return null; }
       currentEventId = data[0].id;
+      setLocalEventId(currentEventId); // Nastavíme, ať další průběžný uložení ví, co updatovat
     } else {
       await supabase.from('events').update({ name: eventName }).eq('id', currentEventId);
+      
+      // Promažeme starý záznamy před přepsáním, ať se nám to neduplikuje
+      const { data: oldMatches } = await supabase.from('matches').select('id').eq('event_id', currentEventId);
+      if (oldMatches && oldMatches.length > 0) {
+        const oldMatchIds = oldMatches.map(m => m.id);
+        await supabase.from('match_participants').delete().in('match_id', oldMatchIds);
+        await supabase.from('matches').delete().eq('event_id', currentEventId);
+      }
     }
 
+    // Nasypeme tam tu aktuální kartu
     for (const m of matches) {
       const { data: matchData } = await supabase.from('matches').insert([{
         event_id: currentEventId,
@@ -119,8 +154,17 @@ export default function EventBuilder({ date, existingEventId, onClose, onSave })
         teamNumber++;
       }
     }
+    return currentEventId;
+  };
 
-    onSave();
+  const handleSaveProgress = async () => {
+    const id = await saveEventData();
+    if (id) alert("Průběžně uloženo, brácho! Můžeš to zavřít a pak pokračovat.");
+  };
+
+  const handleFinalSave = async () => {
+    const id = await saveEventData();
+    if (id) onSave(); // Tohle ho zavře a aktualizuje kalendář
   };
 
   const getWrestlerName = (id) => wrestlers.find(w => w.id === id)?.name || 'Unknown';
@@ -242,9 +286,16 @@ export default function EventBuilder({ date, existingEventId, onClose, onSave })
           ))}
         </div>
 
-        <button onClick={saveEvent} className="w-full bg-accent hover:bg-blue-600 text-white font-bold py-4 rounded-xl text-xl flex items-center justify-center gap-2 transition-colors">
-          <Save size={24} /> Confirm & Save Event
-        </button>
+        {/* Rozdělený tlačítka pro uložení */}
+        <div className="flex flex-col md:flex-row gap-4 mt-8">
+          <button onClick={handleSaveProgress} className="flex-1 bg-darker border border-gray-600 hover:border-blue-500 text-gray-300 hover:text-white font-bold py-4 rounded-xl text-lg flex items-center justify-center gap-2 transition-colors">
+            <SaveAll size={24} className="text-blue-500" /> Průběžně Uložit
+          </button>
+
+          <button onClick={handleFinalSave} className="flex-1 bg-accent hover:bg-blue-600 text-white font-bold py-4 rounded-xl text-lg flex items-center justify-center gap-2 transition-colors shadow-lg">
+            <Save size={24} /> Confirm & Save Event
+          </button>
+        </div>
 
       </motion.div>
     </motion.div>
